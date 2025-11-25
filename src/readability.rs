@@ -136,11 +136,9 @@ impl Readability {
         // Validate base URL if provided
         let base_url = url
             .map(|u| {
-                if crate::utils::is_url(u) {
-                    Ok(u.to_string())
-                } else {
-                    Err(ReadabilityError::InvalidUrl(u.to_string()))
-                }
+                url::Url::parse(u)
+                    .map(|_| u.to_string())
+                    .map_err(|_| ReadabilityError::InvalidUrl(u.to_string()))
             })
             .transpose()?;
 
