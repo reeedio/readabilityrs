@@ -6,11 +6,9 @@
 [![Downloads](https://img.shields.io/crates/d/readabilityrs)](https://crates.io/crates/readabilityrs)
 [![GitHub Stars](https://img.shields.io/github/stars/theiskaa/readabilityrs)](https://github.com/theiskaa/readabilityrs/stargazers)
 
-readabilityrs extracts article content from HTML web pages using Mozilla's Readability algorithm. The library identifies and isolates the main article text, removing navigation, advertisements, and other clutter. Metadata extraction includes title, author, publication date, and excerpt generation.
+readabilityrs extracts article content from HTML web pages using Mozilla's Readability algorithm. The library identifies and isolates the main article text while removing navigation, advertisements, and other clutter.
 
-This is a Rust port of [Mozilla's Readability.js](https://github.com/mozilla/readability), which powers Firefox's Reader View. The implementation passes 93.8% of Mozilla's test suite (122/130 tests) with full document preprocessing support. Built in Rust for performance, memory safety, and zero-cost abstractions.
-
-The library provides both DOM-based content extraction and metadata parsing from multiple sources including JSON-LD, OpenGraph, Twitter Cards, and semantic HTML attributes. Content scoring algorithms identify the main article container while filtering sidebars, comments, and related content sections. Supports standard web article formats including news sites, blogs, documentation, and long-form content.
+This is a Rust port of [Mozilla's Readability.js](https://github.com/mozilla/readability), which powers Firefox's Reader View. The implementation passes 93.8% of Mozilla's test suite with full document preprocessing support.
 
 ## Install
 Add to your project:
@@ -27,7 +25,7 @@ readabilityrs = "0.1.0"
 ```
 
 ## Usage
-The library provides a simple API for parsing HTML documents. Create a `Readability` instance with HTML content, an optional base URL for resolving relative links, and optional configuration. Call `parse()` to extract the article.
+The library provides a simple API for parsing HTML documents. Create a `Readability` instance with your HTML content, an optional base URL for resolving relative links, and optional configuration settings. Call `parse()` to extract the article and access properties like title, content, author, excerpt, and publication time. The extracted content is returned as clean HTML suitable for display in reader applications.
 
 ```rust
 use readabilityrs::Readability;
@@ -53,40 +51,13 @@ if let Some(article) = readability.parse() {
 ```
 
 ## Content Extraction
-The library uses Mozilla's proven content scoring algorithm to identify the main article container. Scoring considers element types where paragraph and article tags score higher than generic divs, text density measured by character count and comma frequency, link density to filter navigation-heavy sections, and class name patterns matching positive indicators like "article" or "content" versus negative patterns like "sidebar" or "advertisement".
-
-Document preprocessing removes scripts and styles before extraction, unwraps noscript tags to reveal lazy-loaded images, and replaces deprecated font tags with span elements. This preprocessing step improves extraction accuracy by 2.3 percentage points compared to parsing raw HTML. Content cleaning maintains tables with data while removing layout tables, preserves images and videos within the article, and filters hidden elements and empty paragraphs.
-
-```rust
-use readabilityrs::Readability;
-
-let html = fetch_article("https://example.com/article");
-let readability = Readability::new(&html, Some("https://example.com"), None)?;
-
-if let Some(article) = readability.parse() {
-    let clean_html = article.content.unwrap();
-    let plain_text = article.text_content.unwrap();
-    let char_count = article.length;
-}
-```
+The library uses Mozilla's content scoring algorithm to identify the main article. Elements are scored based on tag types, text density, link density, and class name patterns. Document preprocessing removes scripts and styles, unwraps noscript tags, and normalizes deprecated elements before extraction, improving accuracy by 2.3 percentage points compared to parsing raw HTML.
 
 ## Metadata Extraction
-Metadata extraction follows a priority chain starting with JSON-LD structured data, then OpenGraph meta tags, Twitter Cards, Dublin Core, and standard meta tags. Byline detection searches for rel="author" links, itemprop="author" elements, and common CSS classes like "byline" or "author". Title extraction removes site names using separator detection, handling both pipe and colon separators intelligently.
-
-Excerpt generation selects the first substantial paragraph while filtering navigation menus, hatnotes, and other noise. The system skips paragraphs under 25 characters and validates content quality before selection. Language detection uses the html lang attribute or Content-Language meta tags. Publication time parsing supports ISO 8601 timestamps from article:published_time and datePublished fields.
-
-```rust
-let readability = Readability::new(&html, None, None)?;
-if let Some(article) = readability.parse() {
-    println!("Title: {:?}", article.title);
-    println!("Author: {:?}", article.byline);
-    println!("Excerpt: {:?}", article.excerpt);
-    println!("Published: {:?}", article.published_time);
-}
-```
+Metadata is extracted from JSON-LD, OpenGraph, Twitter Cards, Dublin Core, and standard meta tags in that priority order. The library detects authors through rel="author" links and common byline patterns, extracts clean titles by removing site names, and generates excerpts from the first substantial paragraph.
 
 ## Configuration
-Configuration controls parsing behavior through `ReadabilityOptions`. Debug mode enables detailed logging for troubleshooting extraction issues. Character thresholds determine minimum article length to accept. The builder pattern provides a fluent API for setting options including element parsing limits, candidate selection count, class preservation rules, and link density scoring adjustments.
+Configure parsing behavior through `ReadabilityOptions` using the builder pattern. Options include debug logging, character thresholds, candidate selection, class preservation, and link density scoring.
 
 ```rust
 use readabilityrs::{Readability, ReadabilityOptions};
@@ -105,23 +76,10 @@ let readability = Readability::new(&html, None, Some(options))?;
 ```
 
 ## URL Handling
-Base URL resolution converts relative links to absolute URLs. Image sources, anchors, and embedded content maintain correct paths for display outside the original context. URL validation ensures proper format before parsing, returning errors rather than failing silently during extraction.
-
-```rust
-let readability = Readability::new(
-    &html,
-    Some("https://example.com/articles/2024/post"),
-    None
-)?;
-
-if let Some(article) = readability.parse() {
-    // All relative URLs converted to absolute
-    println!("{}", article.content.unwrap());
-}
-```
+Provide a base URL to convert relative links to absolute URLs. This ensures images, anchors, and embedded content maintain correct paths when displayed outside the original context.
 
 ## Error Handling
-The library returns `Result` types for operations that can fail. Common errors include invalid URLs, malformed HTML, and parsing failures. The `NoContentFound` error indicates the algorithm could not identify article content.
+The library returns `Result` types for operations that can fail. Common errors include invalid URLs and parsing failures.
 
 ```rust
 use readabilityrs::{Readability, error::ReadabilityError};
@@ -133,20 +91,10 @@ fn extract_article(html: &str, url: &str) -> Result<String, ReadabilityError> {
 }
 ```
 
-The scoring system assigns points to elements based on tag types where article tags receive 8 points, section tags receive 8 points, paragraph tags receive 5 points, and div tags receive 2-5 points depending on whether they contain block-level children. Class and ID patterns add or subtract 25 points based on positive keywords like "article" and "content" versus negative keywords like "sidebar" and "comment". Content metrics include comma count as a signal of substantial text and character length bonuses up to 3 points for paragraphs over 300 characters. Link density penalties reduce scores for navigation-heavy sections.
+## Performance & Test Compatibility
+Built in Rust for performance and memory safety, the library leverages zero-cost abstractions to enable optimizations without runtime overhead. Minimal allocations during parsing through efficient string handling and DOM traversal mean the library processes typical news articles in milliseconds on modern hardware. Memory usage scales with document size, typically under 10MB for standard web pages. The Rust implementation is significantly faster than the original JavaScript version while maintaining lower memory footprint.
 
-Document preprocessing occurs before content extraction in a specific sequence. Scripts and styles are removed completely to eliminate noise. Font tags are replaced with span elements for consistent parsing. Noscript tags are unwrapped to reveal lazy-loaded images that would otherwise remain hidden. Form elements are removed as they typically don't contribute to article content. After preprocessing the HTML is reparsed to create a clean DOM structure for extraction.
-
-Metadata extraction follows a strict priority chain where JSON-LD structured data takes highest priority, followed by OpenGraph meta tags, then Twitter Card meta tags, Dublin Core meta tags, and standard meta tags. Later sources only fill missing fields without overriding earlier sources. DOM-based byline extraction can override meta tags when confidence is high, such as finding rel="author" links or itemprop="author" elements with author-like text content.
-
-### Test Compatibility
-The implementation passes 122 of 130 tests from Mozilla's test suite achieving 93.8% compatibility. The 8 failing tests represent editorial judgment differences rather than implementation errors. Four cases involve more sensible choices in our implementation such as avoiding bylines extracted from related article sidebars and preferring author names over timestamps. Four cases involve subjective paragraph selection for excerpts where both the reference and our implementation make valid choices. Full document preprocessing is enabled matching Mozilla's production behavior.
-
-## Performance
-Built in Rust for performance and memory safety. Zero-cost abstractions enable optimizations without runtime overhead. Minimal allocations during parsing through efficient string handling and DOM traversal. The library processes typical news articles in milliseconds on modern hardware. Memory usage scales with document size, typically under 10MB for standard web pages.
-
-## Credits
-This is a Rust port of [Mozilla's Readability](https://github.com/mozilla/readability), originally based on Arc90's readability.js. The test suite and algorithm design are from Mozilla's implementation under Apache 2.0 license.
+The implementation passes 122 of 130 tests from Mozilla's test suite achieving 93.8% compatibility with full document preprocessing support. The 8 failing tests represent editorial judgment differences rather than implementation errors. Four cases involve more sensible choices in our implementation such as avoiding bylines extracted from related article sidebars and preferring author names over timestamps. Four cases involve subjective paragraph selection for excerpts where both the reference and our implementation make valid choices. This means the results are 93.8% identical to Mozilla's implementation, with the remaining differences being arguable improvements to the extraction logic.
 
 ## Contributing
 For information regarding contributions, please refer to [CONTRIBUTING.md](CONTRIBUTING.md) file.
