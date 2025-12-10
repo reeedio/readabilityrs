@@ -48,7 +48,8 @@ fn decode_html_entity(entity: &str) -> Option<String> {
                     .map(|c| c.to_string())
             } else if entity.starts_with("&#") && entity.ends_with(';') {
                 let digits = entity.get(2..entity.len() - 1)?;
-                u32::from_str_radix(digits, 10)
+                digits
+                    .parse::<u32>()
                     .ok()
                     .and_then(std::char::from_u32)
                     .map(|c| c.to_string())
@@ -201,7 +202,7 @@ fn contains_author_like_segment(text: &str) -> bool {
     false
 }
 
-fn split_candidate_segments<'a>(text: &'a str) -> Vec<&'a str> {
+fn split_candidate_segments(text: &str) -> Vec<&str> {
     let mut segments = Vec::new();
 
     for line in text.split('\n') {
@@ -494,8 +495,8 @@ pub(crate) fn looks_like_dateline(text: &str) -> bool {
     }
 
     let stripped = trimmed
-        .trim_start_matches(|c: char| matches!(c, '-' | '–' | '—'))
-        .trim_end_matches(|c: char| matches!(c, '-' | '–' | '—'));
+        .trim_start_matches(['-', '–', '—'])
+        .trim_end_matches(['-', '–', '—']);
     if stripped.is_empty() {
         return false;
     }

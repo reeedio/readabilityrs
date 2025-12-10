@@ -110,7 +110,7 @@ fn find_candidates<'a>(
         if flags.contains(ParseFlags::STRIP_UNLIKELYS) {
             let class = p.value().attr("class").unwrap_or("");
             let id = p.value().attr("id").unwrap_or("");
-            let match_string = format!("{} {}", class, id);
+            let match_string = format!("{class} {id}");
 
             if REGEXPS.unlikely_candidates.is_match(&match_string)
                 && !REGEXPS.ok_maybe_its_a_candidate.is_match(&match_string)
@@ -137,7 +137,7 @@ fn find_candidates<'a>(
             if flags.contains(ParseFlags::STRIP_UNLIKELYS) {
                 let class = elem.value().attr("class").unwrap_or("");
                 let id = elem.value().attr("id").unwrap_or("");
-                let match_string = format!("{} {}", class, id);
+                let match_string = format!("{class} {id}");
 
                 if REGEXPS.unlikely_candidates.is_match(&match_string)
                     && !REGEXPS.ok_maybe_its_a_candidate.is_match(&match_string)
@@ -438,9 +438,7 @@ fn promote_dense_wrapper_child(
     scores: &HashMap<String, f64>,
     sorted_scores: &[(&String, &f64)],
 ) -> Option<String> {
-    let Some(best_elem) = find_element_by_id(document, best_id) else {
-        return None;
-    };
+    let best_elem = find_element_by_id(document, best_id)?;
 
     let tag = best_elem.value().name().to_uppercase();
     if matches!(tag.as_str(), "ARTICLE" | "SECTION" | "MAIN") {
@@ -530,9 +528,7 @@ fn promote_semantic_descendant(
         return None;
     }
 
-    let Some(best_elem) = find_element_by_id(document, best_id) else {
-        return None;
-    };
+    let best_elem = find_element_by_id(document, best_id)?;
 
     let class_id = format!(
         "{} {}",
@@ -682,9 +678,9 @@ fn extract_article_content(
             };
 
             let weighted_sibling_score = sibling_score + class_bonus;
-            if weighted_sibling_score >= sibling_score_threshold {
-                true
-            } else if is_good_sibling_paragraph(sibling) {
+            if weighted_sibling_score >= sibling_score_threshold
+                || is_good_sibling_paragraph(sibling)
+            {
                 true
             } else {
                 should_keep_block_element(sibling, best_score)
@@ -725,7 +721,7 @@ fn is_good_sibling_paragraph(element: ElementRef) -> bool {
 
     let class = element.value().attr("class").unwrap_or("");
     let id = element.value().attr("id").unwrap_or("");
-    let match_string = format!("{} {}", class, id);
+    let match_string = format!("{class} {id}");
 
     if REGEXPS.unlikely_candidates.is_match(&match_string)
         && !REGEXPS.ok_maybe_its_a_candidate.is_match(&match_string)
@@ -847,7 +843,7 @@ fn should_convert_div_to_p(element: ElementRef) -> bool {
 fn count_element_children(element: ElementRef) -> usize {
     element
         .children()
-        .filter_map(|child| ElementRef::wrap(child))
+        .filter_map(ElementRef::wrap)
         .count()
 }
 
@@ -917,7 +913,7 @@ fn element_to_html(element: ElementRef) -> String {
     };
 
     let mut html = String::new();
-    html.push_str(&format!("<{}", tag_name));
+    html.push_str(&format!("<{tag_name}"));
 
     for (name, value) in elem_data.attrs.iter() {
         html.push_str(&format!(" {}=\"{}\"", name.local, value));
@@ -950,7 +946,7 @@ fn element_to_html(element: ElementRef) -> String {
         }
     }
 
-    html.push_str(&format!("</{}>", tag_name));
+    html.push_str(&format!("</{tag_name}>"));
     html
 }
 
@@ -964,12 +960,7 @@ fn find_element_by_id<'a>(document: &'a Html, id: &str) -> Option<ElementRef<'a>
     // For now, search for elements and match by generated ID
 
     let all_selector = Selector::parse("*").unwrap();
-    for elem in document.select(&all_selector) {
-        if get_element_id(&elem) == id {
-            return Some(elem);
-        }
-    }
-    None
+    document.select(&all_selector).find(|&elem| get_element_id(&elem) == id)
 }
 
 #[cfg(test)]
