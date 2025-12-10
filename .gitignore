@@ -1,7 +1,3 @@
 /target
 /inlinedocs
 /inlinedocs/*
-
-# Benchmark artifacts
-/benchmark/node_modules
-/benchmark/*-results.json
