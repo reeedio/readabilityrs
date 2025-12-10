@@ -179,7 +179,7 @@ pub fn get_node_ancestors<'a>(
 pub fn has_child_block_element(element: ElementRef) -> bool {
     element
         .children()
-        .filter_map(|child| ElementRef::wrap(child))
+        .filter_map(ElementRef::wrap)
         .any(|child| !is_phrasing_content(child))
 }
 

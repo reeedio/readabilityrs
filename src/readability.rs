@@ -181,7 +181,7 @@ impl Readability {
                         Ok(html) => html,
                         Err(e) => {
                             if self.options.debug {
-                                eprintln!("Error cleaning content: {}", e);
+                                eprintln!("Error cleaning content: {e}");
                             }
                             prepped_html
                         }
@@ -217,7 +217,7 @@ impl Readability {
             Ok(None) => None,
             Err(e) => {
                 if self.options.debug {
-                    eprintln!("Error grabbing article: {}", e);
+                    eprintln!("Error grabbing article: {e}");
                 }
                 None
             }
@@ -328,7 +328,7 @@ impl Readability {
             return true;
         }
 
-        let link_density = dom_utils::get_link_density(element.clone());
+        let link_density = dom_utils::get_link_density(*element);
         link_density > 0.8
     }
 
@@ -402,7 +402,7 @@ impl Readability {
     #[allow(dead_code)]
     fn log(&self, message: &str) {
         if self.options.debug {
-            eprintln!("Reader: (Readability) {}", message);
+            eprintln!("Reader: (Readability) {message}");
         }
     }
 }

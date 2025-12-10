@@ -57,15 +57,13 @@ fn remove_nav_like_sections(html: &str) -> String {
     for tag in tags {
         for keyword in keywords {
             let class_pattern = format!(
-                r#"(?is)<{}\b[^>]*?class="[^"]*?{}[^"]*?"[^>]*?>.*?</{}>"#,
-                tag, keyword, tag
+                r#"(?is)<{tag}\b[^>]*?class="[^"]*?{keyword}[^"]*?"[^>]*?>.*?</{tag}>"#
             );
             let re = Regex::new(&class_pattern).unwrap();
             result = re.replace_all(&result, "").to_string();
 
             let id_pattern = format!(
-                r#"(?is)<{}\b[^>]*?id="[^"]*?{}[^"]*?"[^>]*?>.*?</{}>"#,
-                tag, keyword, tag
+                r#"(?is)<{tag}\b[^>]*?id="[^"]*?{keyword}[^"]*?"[^>]*?>.*?</{tag}>"#
             );
             let re = Regex::new(&id_pattern).unwrap();
             result = re.replace_all(&result, "").to_string();
@@ -754,7 +752,7 @@ fn parse_element(html: &str) -> Option<(&str, &str, &str, &str)> {
         (opening_tag, "")
     };
 
-    let closing_tag_pattern = format!("</{}>", tag_name);
+    let closing_tag_pattern = format!("</{tag_name}>");
     let closing_start = html.rfind(&closing_tag_pattern)?;
     let inner_content = &html[opening_end + 1..closing_start];
     let closing_tag_name = tag_name;
@@ -774,7 +772,7 @@ fn replace_brs_in_content(content: &str) -> String {
         .iter()
         .map(|p| p.trim())
         .filter(|p| !p.is_empty())
-        .map(|p| format!("<p>{}</p>", p))
+        .map(|p| format!("<p>{p}</p>"))
         .collect();
 
     if paragraphs.is_empty() {

@@ -88,15 +88,13 @@ fn remove_share_elements(html: &str) -> String {
     for tag in &tags {
         for keyword in &keywords {
             let class_pattern = format!(
-                r#"(?is)<{}\b[^>]*?class="[^"]*?{}[^"]*?"[^>]*?>.*?</{}>"#,
-                tag, keyword, tag
+                r#"(?is)<{tag}\b[^>]*?class="[^"]*?{keyword}[^"]*?"[^>]*?>.*?</{tag}>"#
             );
             let re = Regex::new(&class_pattern).unwrap();
             result = re.replace_all(&result, "").to_string();
 
             let id_pattern = format!(
-                r#"(?is)<{}\b[^>]*?id="[^"]*?{}[^"]*?"[^>]*?>.*?</{}>"#,
-                tag, keyword, tag
+                r#"(?is)<{tag}\b[^>]*?id="[^"]*?{keyword}[^"]*?"[^>]*?>.*?</{tag}>"#
             );
             let re = Regex::new(&id_pattern).unwrap();
             result = re.replace_all(&result, "").to_string();
@@ -120,15 +118,13 @@ fn remove_navigation_elements(html: &str) -> String {
     for tag in &tags {
         for keyword in &keywords {
             let class_pattern = format!(
-                r#"(?is)<{}\b[^>]*?class="[^"]*?{}[^"]*?"[^>]*?>.*?</{}>"#,
-                tag, keyword, tag
+                r#"(?is)<{tag}\b[^>]*?class="[^"]*?{keyword}[^"]*?"[^>]*?>.*?</{tag}>"#
             );
             let re = Regex::new(&class_pattern).unwrap();
             result = re.replace_all(&result, "").to_string();
 
             let id_pattern = format!(
-                r#"(?is)<{}\b[^>]*?id="[^"]*?{}[^"]*?"[^>]*?>.*?</{}>"#,
-                tag, keyword, tag
+                r#"(?is)<{tag}\b[^>]*?id="[^"]*?{keyword}[^"]*?"[^>]*?>.*?</{tag}>"#
             );
             let re = Regex::new(&id_pattern).unwrap();
             result = re.replace_all(&result, "").to_string();

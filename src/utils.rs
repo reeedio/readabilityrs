@@ -201,7 +201,7 @@ fn contains_author_like_segment(text: &str) -> bool {
     false
 }
 
-fn split_candidate_segments<'a>(text: &'a str) -> Vec<&'a str> {
+fn split_candidate_segments(text: &str) -> Vec<&str> {
     let mut segments = Vec::new();
 
     for line in text.split('\n') {
@@ -494,8 +494,8 @@ pub(crate) fn looks_like_dateline(text: &str) -> bool {
     }
 
     let stripped = trimmed
-        .trim_start_matches(|c: char| matches!(c, '-' | '–' | '—'))
-        .trim_end_matches(|c: char| matches!(c, '-' | '–' | '—'));
+        .trim_start_matches(['-', '–', '—'])
+        .trim_end_matches(['-', '–', '—']);
     if stripped.is_empty() {
         return false;
     }

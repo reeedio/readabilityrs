@@ -262,7 +262,7 @@ pub fn get_article_metadata(document: &Html, json_ld: Metadata) -> Metadata {
             .or_else(|| values.get("dcterm:creator"))
             .or_else(|| values.get("author"))
             .or_else(|| values.get("parsely-author"))
-            .or_else(|| article_author.as_ref())
+            .or(article_author.as_ref())
             .cloned()
     });
 
@@ -424,7 +424,7 @@ fn extract_byline_from_document(document: &Html) -> Option<DomBylineCandidate> {
                 let class = link.value().attr("class").unwrap_or("");
                 let id = link.value().attr("id").unwrap_or("");
                 let rel_attr = link.value().attr("rel").unwrap_or("");
-                let match_string = format!("{} {}", class, id);
+                let match_string = format!("{class} {id}");
                 let has_author_rel = rel_attr
                     .split_whitespace()
                     .any(|rel| rel.eq_ignore_ascii_case("author"));
@@ -465,7 +465,7 @@ fn extract_byline_from_document(document: &Html) -> Option<DomBylineCandidate> {
                 let class = elem.value().attr("class").unwrap_or("");
                 let id = elem.value().attr("id").unwrap_or("");
                 let itemprop = elem.value().attr("itemprop").unwrap_or("");
-                let match_string = format!("{} {}", class, id);
+                let match_string = format!("{class} {id}");
                 let has_author_itemprop = itemprop
                     .split_whitespace()
                     .any(|prop| prop.eq_ignore_ascii_case("author"));
@@ -519,7 +519,7 @@ fn extract_byline_from_document(document: &Html) -> Option<DomBylineCandidate> {
 
                 let class = elem.value().attr("class").unwrap_or("");
                 let id = elem.value().attr("id").unwrap_or("");
-                let match_string = format!("{} {}", class, id);
+                let match_string = format!("{class} {id}");
 
                 if scoring::is_valid_byline(elem, &match_string)
                     || utils::looks_like_byline(&text)
@@ -575,7 +575,7 @@ fn extract_byline_from_document(document: &Html) -> Option<DomBylineCandidate> {
             }
 
             let text_is_caps = looks_like_caps_author(&text);
-            let match_string = format!("{} {}", class, id);
+            let match_string = format!("{class} {id}");
             if scoring::is_valid_byline(elem, &match_string)
                 || utils::looks_like_byline(&text)
                 || text_is_caps
@@ -1068,14 +1068,8 @@ fn contains_caps_noise_token(text: &str) -> bool {
 }
 
 fn parent_byline_text(element: &ElementRef) -> Option<String> {
-    let parent_node = match element.parent() {
-        Some(node) => node,
-        None => return None,
-    };
-    let parent = match ElementRef::wrap(parent_node) {
-        Some(el) => el,
-        None => return None,
-    };
+    let parent_node = element.parent()?;
+    let parent = ElementRef::wrap(parent_node)?;
     if is_ignorable_byline_context(&parent) {
         return None;
     }
@@ -1118,7 +1112,7 @@ fn is_priority_dom_candidate(candidate: &DomBylineCandidate, raw_caps: bool) -> 
 
 fn ancestor_has_keyword(element: &ElementRef, keywords: &[&str], max_depth: usize) -> bool {
     let mut depth = 0;
-    let mut current = Some(element.clone());
+    let mut current = Some(*element);
 
     while let Some(el) = current {
         let class = el.value().attr("class").unwrap_or("").to_lowercase();
@@ -1334,7 +1328,7 @@ fn extract_title_from_document(document: &Html) -> Option<String> {
 
     cur_title = REGEXPS
         .normalize
-        .replace_all(&cur_title.trim(), " ")
+        .replace_all(cur_title.trim(), " ")
         .to_string();
 
     let cur_word_count = word_count(&cur_title);
