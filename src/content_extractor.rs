@@ -6,6 +6,7 @@ use crate::options::ReadabilityOptions;
 use crate::{dom_utils, scoring};
 use scraper::{ElementRef, Html, Selector};
 use std::collections::HashMap;
+use v_htmlescape::escape;
 
 /// Represents an extraction attempt
 #[derive(Debug, Clone)]
@@ -937,7 +938,7 @@ fn element_to_html(element: ElementRef) -> String {
                 }
             }
             Node::Text(text) => {
-                html.push_str(&text.text);
+                html.push_str(&escape(&text.text).to_string());
             }
             Node::Comment(comment) => {
                 html.push_str(&format!("<!--{}-->", comment.comment));
