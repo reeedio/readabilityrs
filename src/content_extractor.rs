@@ -6,6 +6,7 @@ use crate::options::ReadabilityOptions;
 use crate::{dom_utils, scoring};
 use scraper::{ElementRef, Html, Selector};
 use std::collections::HashMap;
+use v_htmlescape::escape;
 
 /// Represents an extraction attempt
 #[derive(Debug, Clone)]
@@ -937,7 +938,7 @@ fn element_to_html(element: ElementRef) -> String {
                 }
             }
             Node::Text(text) => {
-                html.push_str(&text.text);
+                html.push_str(&escape(&text.text).to_string());
             }
             Node::Comment(comment) => {
                 html.push_str(&format!("<!--{}-->", comment.comment));
@@ -1078,5 +1079,37 @@ mod tests {
         assert!(content_html.contains("third paragraph"));
         // The fourth paragraph might not be included depending on scoring,
         // but we should have at least the first three
+    }
+
+    #[test]
+    fn test_html_escape() {
+        let html = r#"
+            <html>
+                <body>
+                    <article>
+                        <h1>Test Article</h1>
+                        <p>This is the first paragraph with some content that should be extracted.</p>
+                        <p>This is the second paragraph with more content to ensure we have enough text.</p>
+                        <p>And a third paragraph to make sure we exceed the minimum threshold for article extraction.</p>
+                        &lt;script&gt;
+                        console.log("…but that’s good! That means your future was polled! Bla Bla Black sheep");
+                        &lt;/script&gt;
+                    </article>
+                </body>
+            </html>
+        "#;
+
+        let document = Html::parse_document(html);
+        let options = ReadabilityOptions::builder().char_threshold(100).build();
+
+        let result = grab_article(&document, &options);
+        assert!(result.is_ok());
+
+        let content = result.unwrap();
+        assert!(content.is_some());
+
+        let content_html = content.unwrap();
+        assert!(!content_html.contains("<script>"));
+        assert!(content_html.contains("&lt;script&gt;"));
     }
 }
