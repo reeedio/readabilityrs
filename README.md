@@ -1,4 +1,4 @@
-# ReadabilityRS
+# Readability.rs
 
 [![Crates.io](https://img.shields.io/crates/v/readabilityrs)](https://crates.io/crates/readabilityrs)
 [![Documentation](https://img.shields.io/docsrs/readabilityrs)](https://docs.rs/readabilityrs)
