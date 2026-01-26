@@ -5,6 +5,7 @@
 
 use once_cell::sync::Lazy;
 use regex::Regex;
+use scraper::{Html, Selector};
 
 /// Remove nav-heavy wrappers by descending into content-like children.
 fn unwrap_nav_wrappers(html: &str) -> String {
@@ -16,6 +17,80 @@ fn unwrap_nav_wrappers(html: &str) -> String {
     });
 
     WRAPPER_REGEX.replace_all(html, "").to_string()
+}
+
+/// Remove the title element from the article content if it matches the extracted title.
+///
+/// Finds the first h1 or h2 element whose text content matches the given title
+/// (after normalization) and removes it from the HTML.
+///
+/// # Arguments
+/// * `html` - The article HTML content
+/// * `title` - The extracted article title to match against
+///
+/// # Returns
+/// The HTML with the matching title element removed, or the original HTML if no match found
+pub fn remove_title_from_content(html: &str, title: &str) -> String {
+    let doc = Html::parse_fragment(html);
+
+    // Normalize the title for comparison
+    let normalized_title = normalize_text(title);
+    if normalized_title.is_empty() {
+        return html.to_string();
+    }
+
+    // Try to find h1 or h2 elements that match the title
+    let selector = Selector::parse("h1, h2").unwrap();
+
+    for element in doc.select(&selector) {
+        let element_text: String = element.text().collect();
+        let normalized_element_text = normalize_text(&element_text);
+
+        // Check if the heading text matches the title (exact or near match)
+        if titles_match(&normalized_title, &normalized_element_text) {
+            // Get the outer HTML of this element and remove it
+            let element_html = element.html();
+            // Replace only the first occurrence
+            if let Some(pos) = html.find(&element_html) {
+                let mut result = String::with_capacity(html.len());
+                result.push_str(&html[..pos]);
+                result.push_str(&html[pos + element_html.len()..]);
+                return result;
+            }
+        }
+    }
+
+    html.to_string()
+}
+
+/// Normalize text for title comparison: lowercase, collapse whitespace, trim
+fn normalize_text(text: &str) -> String {
+    static WHITESPACE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
+    WHITESPACE_REGEX
+        .replace_all(text.trim(), " ")
+        .to_lowercase()
+}
+
+/// Check if two normalized titles match (exact or one contains the other)
+fn titles_match(title1: &str, title2: &str) -> bool {
+    if title1 == title2 {
+        return true;
+    }
+
+    // Allow for slight variations - one contains the other
+    // This handles cases where the h1 might have extra text or vice versa
+    let len1 = title1.len();
+    let len2 = title2.len();
+
+    // If lengths are similar (within 20%), check if one contains the other
+    if len1 > 0 && len2 > 0 {
+        let ratio = len1.min(len2) as f64 / len1.max(len2) as f64;
+        if ratio > 0.8 && (title1.contains(title2) || title2.contains(title1)) {
+            return true;
+        }
+    }
+
+    false
 }
 
 /// Prepare extracted article content for final output
@@ -257,5 +332,101 @@ mod tests {
         assert!(!cleaned.contains("<footer"));
         assert!(!cleaned.contains("<form"));
         assert!(!cleaned.contains("<p></p>"));
+    }
+
+    #[test]
+    fn test_remove_title_from_content_h1() {
+        let html = r#"
+            <article>
+                <h1>Article Title</h1>
+                <p>First paragraph</p>
+                <p>Second paragraph</p>
+            </article>
+        "#;
+
+        let cleaned = remove_title_from_content(html, "Article Title");
+
+        assert!(!cleaned.contains("<h1>"));
+        assert!(!cleaned.contains("Article Title"));
+        assert!(cleaned.contains("<p>First paragraph</p>"));
+        assert!(cleaned.contains("<p>Second paragraph</p>"));
+    }
+
+    #[test]
+    fn test_remove_title_from_content_h2() {
+        let html = r#"
+            <article>
+                <h2>Article Title</h2>
+                <p>First paragraph</p>
+            </article>
+        "#;
+
+        let cleaned = remove_title_from_content(html, "Article Title");
+
+        assert!(!cleaned.contains("<h2>"));
+        assert!(!cleaned.contains("Article Title"));
+        assert!(cleaned.contains("<p>First paragraph</p>"));
+    }
+
+    #[test]
+    fn test_remove_title_from_content_with_whitespace() {
+        let html = r#"
+            <article>
+                <h1>  Article   Title  </h1>
+                <p>Content</p>
+            </article>
+        "#;
+
+        let cleaned = remove_title_from_content(html, "Article Title");
+
+        assert!(!cleaned.contains("<h1>"));
+        assert!(cleaned.contains("<p>Content</p>"));
+    }
+
+    #[test]
+    fn test_remove_title_from_content_case_insensitive() {
+        let html = r#"
+            <article>
+                <h1>ARTICLE TITLE</h1>
+                <p>Content</p>
+            </article>
+        "#;
+
+        let cleaned = remove_title_from_content(html, "Article Title");
+
+        assert!(!cleaned.contains("<h1>"));
+        assert!(cleaned.contains("<p>Content</p>"));
+    }
+
+    #[test]
+    fn test_remove_title_from_content_no_match() {
+        let html = r#"
+            <article>
+                <h1>Different Title</h1>
+                <p>Content</p>
+            </article>
+        "#;
+
+        let cleaned = remove_title_from_content(html, "Article Title");
+
+        // Should preserve the h1 when no match
+        assert!(cleaned.contains("<h1>Different Title</h1>"));
+        assert!(cleaned.contains("<p>Content</p>"));
+    }
+
+    #[test]
+    fn test_remove_title_from_content_empty_title() {
+        let html = r#"
+            <article>
+                <h1>Article Title</h1>
+                <p>Content</p>
+            </article>
+        "#;
+
+        let cleaned = remove_title_from_content(html, "");
+
+        // Should preserve everything when title is empty
+        assert!(cleaned.contains("<h1>Article Title</h1>"));
+        assert!(cleaned.contains("<p>Content</p>"));
     }
 }
